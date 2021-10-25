@@ -62,8 +62,8 @@ def define_dsearch_args(parser):
                         help="The beta parameter to control the contribution from the average vector of the PRF passages")
     parser.add_argument('--sparse-index', type=str, metavar='sparse lucene index containing contents', required=False,
                         help='The path to sparse index containing the passage contents')
-    parser.add_argument('--ance-prf-encoder', type=str, metavar='query encoder path for ANCE-PRF', required=False,
-                        help='The path or name to ANCE-PRF model checkpoint')
+    parser.add_argument('--prf-encoder', type=str, metavar='query encoder path for Dense-PRF', required=False,
+                        help='The path or name to Dense-PRF model checkpoint')
 
 
 def init_query_encoder(encoder, tokenizer_name, topics_name, encoded_queries, device, prefix):
@@ -174,7 +174,7 @@ if __name__ == '__main__':
                 sparse_searcher = SimpleSearcher(args.sparse_index)
             else:
                 sparse_searcher = SimpleSearcher.from_prebuilt_index(args.sparse_index)
-            prf_query_encoder = AnceQueryEncoder(encoder_dir=args.ance_prf_encoder, tokenizer_name=args.tokenizer,
+            prf_query_encoder = AnceQueryEncoder(encoder_dir=args.prf_encoder, tokenizer_name=args.tokenizer,
                                                  device=args.device)
             prfRule = DenseVectorAncePrf(prf_query_encoder, sparse_searcher)
         elif args.prf_method.lower() == 'distillbert-prf' and type(query_encoder) == AutoQueryEncoder:
@@ -182,7 +182,7 @@ if __name__ == '__main__':
                 sparse_searcher = SimpleSearcher(args.sparse_index)
             else:
                 sparse_searcher = SimpleSearcher.from_prebuilt_index(args.sparse_index)
-            prf_query_encoder = AutoQueryEncoder(encoder_dir=args.ance_prf_encoder, tokenizer_name=args.tokenizer,
+            prf_query_encoder = AutoQueryEncoder(encoder_dir=args.prf_encoder, tokenizer_name=args.tokenizer,
                                                  device=args.device)
             prfRule = DenseVectorDistillBERTPrf(prf_query_encoder, sparse_searcher)
         elif args.prf_method.lower() == 'tctv2-prf' and type(query_encoder) == TctColBertQueryEncoder:
@@ -190,7 +190,7 @@ if __name__ == '__main__':
                 sparse_searcher = SimpleSearcher(args.sparse_index)
             else:
                 sparse_searcher = SimpleSearcher.from_prebuilt_index(args.sparse_index)
-            prf_query_encoder = TctColBertQueryEncoder(encoder_dir=args.ance_prf_encoder, tokenizer_name=args.tokenizer,
+            prf_query_encoder = TctColBertQueryEncoder(encoder_dir=args.prf_encoder, tokenizer_name=args.tokenizer,
                                                  device=args.device)
             prfRule = DenseVectorTCTColBERTV2HNPPrf(prf_query_encoder, sparse_searcher)
         print(f'Running SimpleDenseSearcher with {args.prf_method.upper()} PRF...')

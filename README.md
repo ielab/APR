@@ -63,4 +63,82 @@ python -m torch.distributed.launch \
 
 ## To inference dense retriever PRF models
 
+Install Pyserini by following the instructions within `pyserini/README.md`
 
+Then run:
+
+```
+python -m pyserini.dsearch --topics /path/to/query/tsv/file \
+    --index /path/to/index \
+    --encoder /path/to/encoder \ # This encoder is for first round retrieval
+    --batch-size 64 \
+    --output /path/to/output/run/file \
+    --prf-method tctv2-prf \
+    --threads 12 \
+    --sparse-index msmarco-passage \
+    --prf-encoder /path/to/encoder \ # This encoder is for PRF query generation
+    --prf-depth 3
+```
+
+An example would be:
+```
+python -m pyserini.dsearch --topics ./data/msmarco-test2020-queries.tsv \
+    --index ./dindex-msmarco-passage-tct_colbert-v2-hnp-bf \
+    --encoder ./tct_colbert_v2_hnp \
+    --batch-size 64 \
+    --output ./runs/tctv2-prf3.res \
+    --prf-method tctv2-prf \
+    --threads 12 \
+    --sparse-index msmarco-passage \
+    --prf-encoder ./tct-colbert-v2-prf3/checkpoint-10000 \
+    --prf-depth 3
+```
+
+Or one can use pre-built index and models available in Pyserini:
+
+```
+python -m pyserini.dsearch --topics dl19-passage \
+    --index msmarco-passage-tct_colbert-v2-hnp-bf \
+    --encoder castorini/tct_colbert-v2-hnp-msmarco \
+    --batch-size 64 \
+    --output ./runs/tctv2-prf3.res \
+    --prf-method tctv2-prf \
+    --threads 12 \
+    --sparse-index msmarco-passage \
+    --prf-encoder ./tct-colbert-v2-prf3/checkpoint-10000 \
+    --prf-depth 3
+```
+
+The PRF depth `--prf-depth 3` depends on the PRF encoder trained, if trained with PRF 3, here only can use PRF 3.
+
+Where `--topics` can be:
+TREC DL 2019 Passage: `dl19-passage`
+TREC DL 2020 Passage: `dl20`
+MS MARCO Passage V1: `msmarco-passage-dev-subset`
+
+`--encoder` can be:
+ANCE: `castorini/ance-msmarco-passage`
+TCT-ColBERT V2 HN+: `castorini/tct_colbert-v2-hnp-msmarco`
+DistilBERT Balanced: `sebastian-hofstaetter/distilbert-dot-tas_b-b256-msmarco`
+
+`--index` can be:
+ANCE index with MS MARCO V1 passage collection: `msmarco-passage-ance-bf`
+TCT-ColBERT V2 HN+ index with MS MARCO V1 passage collection: `msmarco-passage-tct_colbert-v2-hnp-bf`
+DistillBERT Balanced index with MS MARCO V1 passage collection: `msmarco-passage-distilbert-dot-tas_b-b256-bf`
+
+To evaluate the run:
+
+TREC DL 2019
+```
+python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 -m recall.1000 -l 2 dl19-passage ./runs/tctv2-prf3.res
+```
+
+TREC DL 2020
+```
+python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 -m recall.1000 -l 2 dl20-passage ./runs/tctv2-prf3.res
+```
+
+MS MARCO Passage Ranking V1
+```
+python -m pyserini.eval.msmarco_passage_eval msmarco-passage-dev-subset ./runs/tctv2-prf3.res
+```
