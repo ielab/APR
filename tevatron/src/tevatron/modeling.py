@@ -280,10 +280,8 @@ class DenseModel(nn.Module):
     ):
         super().__init__()
         if 'ance' in model_args.model_name_or_path:
-            self.lm_q = AnceEncoder(BertConfig.from_pretrained(
-                model_args.model_name_or_path), model_name=model_args.model_name_or_path)
-            self.passage_encoder = TctColBertDocumentEncoder(BertConfig.from_pretrained(
-                model_args.model_name_or_path), model_name=model_args.model_name_or_path)
+            self.lm_q = lm_q
+            self.passage_encoder = AnceEncoder.from_pretrained(model_args.model_name_or_path)
         elif 'tct_colbert' in model_args.model_name_or_path:
             self.lm_q = TctColBertQueryEncoder(BertConfig.from_pretrained(
                 model_args.model_name_or_path), model_name=model_args.model_name_or_path)
@@ -293,7 +291,7 @@ class DenseModel(nn.Module):
             self.lm_q = AutoQueryEncoder(DistilBertConfig.from_pretrained(
                 model_args.model_name_or_path), encoder_dir=model_args.model_name_or_path)
             self.passage_encoder = AutoDocumentEncoder(DistilBertConfig.from_pretrained(
-            model_args.model_name_or_path), model_name=model_args.model_name_or_path)
+                model_args.model_name_or_path), model_name=model_args.model_name_or_path)
 
         self.lm_p = self.lm_q
         self.pooler = pooler
@@ -322,8 +320,12 @@ class DenseModel(nn.Module):
     ):
         q_hidden, q_reps = self.encode_query(query)
         self.passage_encoder.eval()
-        with torch.no_grad():
-            p_reps = self.passage_encoder.encode(passage)
+        if 'ance' in self.model_args.model_name_or_path:
+            with torch.no_grad():
+                p_reps = self.ance_encoder(passage["input_ids"]).detach()
+        else:
+            with torch.no_grad():
+                p_reps = self.passage_encoder.encode(passage)
         # p_hidden, p_reps = self.encode_passage(passage)
 
         if q_reps is None or p_reps is None:
@@ -459,13 +461,22 @@ class DenseModel(nn.Module):
     def encode_query(self, qry):
         if qry is None:
             return None, None
-        qry_out = self.lm_q.encode(qry)
-        # q_hidden = qry_out.last_hidden_state
-        # if self.pooler is not None:
-        #     q_reps = self.pooler(q=q_hidden)
-        # else:
-        #     q_reps = q_hidden[:, 0]
-        return None, qry_out
+        if 'ance' in self.model_args.model_name_or_path:
+            qry_out = self.lm_q(**qry, return_dict=True)
+            q_hidden = qry_out.last_hidden_state
+            if self.pooler is not None:
+                q_reps = self.pooler(q=q_hidden)
+            else:
+                q_reps = q_hidden[:, 0]
+            return q_hidden, q_reps
+        else:
+            qry_out = self.lm_q.encode(qry)
+            # q_hidden = qry_out.last_hidden_state
+            # if self.pooler is not None:
+            #     q_reps = self.pooler(q=q_hidden)
+            # else:
+            #     q_reps = q_hidden[:, 0]
+            return None, qry_out
 
     @staticmethod
     def build_pooler(model_args):
