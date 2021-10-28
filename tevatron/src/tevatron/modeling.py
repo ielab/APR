@@ -545,8 +545,11 @@ class DenseModel(nn.Module):
             self.lm_q.save_pretrained(os.path.join(output_dir, 'query_model'))
             self.lm_p.save_pretrained(os.path.join(output_dir, 'passage_model'))
         else:
-            self.lm_q.model.save_pretrained(output_dir)
-            self.lm_q.tokenizer.save_pretrained(output_dir)
+            if 'ance' in self.model_args.model_name_or_path:
+                self.lm_q.save_pretrained(output_dir)
+            else:
+                self.lm_q.model.save_pretrained(output_dir)
+                self.lm_q.tokenizer.save_pretrained(output_dir)
 
         if self.model_args.add_pooler:
             self.pooler.save_pooler(output_dir)
